@@ -4,7 +4,7 @@
 #
 # AUTHORS: Sean Hansell
 #
-# VERSION 1.0 (10/04/2013)
+# VERSION 1.1 (10/17/2014)
 # Information about this script can be found in the JWT IT Library:
 # http://itlib.na.corp.jwt.com/services:scripting:tarbackup.sh
 #
@@ -30,6 +30,15 @@ logpipe() {
     exec 3>&-
   done
 } 
+
+# Closes out logging and exits the script with the supplied error code
+goodbye() {
+  exitcode = "${1:-255}"
+  logverb "exit code is ${exitcode}" 5
+  logverb "----- End ${0} -----" 3
+  exec 2>&-
+  exit "${exitcode}"
+}
  
 # Option Processing
 verbosity=5 # Default
@@ -78,9 +87,7 @@ then
   logverb "${sourcepath} exists" 5
 else
   logverb "Error: sourcepath variable is empty. Exit." 1
-  logverb "----- End ${0} -----" 3
-  exec 2>&-
-  exit 1
+  goodbye 1
 fi
  
 # Verify sourcepath is readable
@@ -90,9 +97,7 @@ then
   logverb "${sourcepath} is readable" 5
 else
   logverb "Error: sourcepath is not readable. Exit." 1
-  logverb "----- End ${0} -----" 3
-  exec 2>&-
-  exit 1
+  goodbye 1
 fi
  
 # Verify backuppath exists
@@ -109,9 +114,7 @@ else
     logverb "${backuppath} exists" 5
   else
     logverb "Error: backuppath could not be created. Exit." 1
-    logverb "----- End ${0} -----" 3
-    exec 2>&-
-    exit 1
+    goodbye 1
   fi
 fi
  
@@ -122,9 +125,7 @@ then
   logverb "${backuppath} is writable" 5
 else
   logverb "Error: backuppath is not writeable. Exit." 1
-  logverb "----- End ${0} -----" 3
-  exec 2>&-
-  exit 1
+  goodbye 1
 fi
  
 # Warn if backuppath is temporary
@@ -164,6 +165,4 @@ else
 fi
  
 # Goodbye
-logverb "----- End ${0} -----" 3
-exec 2>&-
-exit 0
+goodbye 0
