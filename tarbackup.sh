@@ -4,7 +4,7 @@
 #
 # AUTHORS: Sean Hansell
 #
-# VERSION 1.1 (10/17/2014)
+# VERSION 1.1.1 (11/07/2014)
 # Information about this script can be found in the JWT IT Library:
 # http://itlib.na.corp.jwt.com/services:scripting:tarbackup.sh
 #
@@ -24,17 +24,19 @@ logpipe() {
   severity="${1:-5}"
   while read line
   do
-    [[ "${verbosity}" -ge "${severity}" ]] && echo "$(date) (${severity}): ${line}"
-    exec 3>>"${logfile}"
-    [[ "${verbosity}" -ge "${severity}" ]] && echo "$(date) (${severity}): ${line}" >&3
-    exec 3>&-
+    logverb "${line}" "${severity}"
   done
-} 
+}
 
 # Closes out logging and exits the script with the supplied error code
 goodbye() {
-  exitcode = "${1:-255}"
-  logverb "exit code is ${exitcode}" 5
+  exitcode="${1:-255}"
+  case "${exitcode}" in
+    0) exitdesc="Success" ;;
+    1) exitdesc="Fatal Error" ;;
+    255) exitdesc="Undefined Error" ;;
+  esac
+  logverb "Exiting with exit code ${exitcode}: ${exitdesc}" 5
   logverb "----- End ${0} -----" 3
   exec 2>&-
   exit "${exitcode}"
