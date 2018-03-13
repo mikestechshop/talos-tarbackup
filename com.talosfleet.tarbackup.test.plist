@@ -3,18 +3,18 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.jwt.tarbackup.fap6</string>
+	<string>com.talosfleet.tarbackup.test</string>
 	<key>OnDemand</key>
 	<true/>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Library/Scripts/JWT/tarbackup/tarbackup.sh</string>
+		<string>/Users/arandall/scripting/tarbackup/tarbackup.sh</string>
 		<string>-v</string>
 		<string>4</string>
-		<string>-l</string>
-		<string>/Library/Logs/JWT/tarbackup-fap6.log</string>
-		<string>/Library/FAPServer</string>
-		<string>/Volumes/Share1/Backups/FAPServer</string>
+		<string>-f</string>
+		<string>/var/log/tarbuckuptest.log</string>
+		<string>/Users/arandall/Desktop/mook</string>
+		<string>/Users/arandall/Desktop/butest</string>
 		<string>36</string>
 	</array>
 	<key>RunAtLoad</key>
