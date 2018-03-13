@@ -1,27 +1,32 @@
 #!/bin/bash
-#####################################################################
-# SCRIPT: tarbackup.sh
-#
-# AUTHORS: Sean Hansell
-#
-# VERSION 1.1.1 (11/07/2014)
-# Information about this script can be found in the JWT IT Library:
-# http://itlib.na.corp.jwt.com/services:scripting:tarbackup.sh
-#
-# USAGE: 
-# tarbackup.sh [-v] verbosity [-l] /pathto/logfile [sourcepath] [backuppath] [daystokeep]
-#####################################################################
+
+# Global Variables
+
+product_name="Talos Backup and compression tool"
+process_name="tarbackup"
+version="2.0.0"
+bundle_id="com.talosfleet.${process_name}"
+hostname=$(hostname -s)
+basename=$(basename $0)
+pid="$$"
  
 # Logging Functions
 logverb() {
-  severity="${2:-5}"
-  [[ "${verbosity}" -ge "${severity}" ]] && echo "$(date) (${severity}): ${1}"
-  exec 3>>"${logfile}"
-  [[ "${verbosity}" -ge "${severity}" ]] && echo "$(date) (${severity}): ${1}" >&3
-  exec 3>&-
+	message="${1}"
+	severity="${2:-5}"
+	case "${severity}" in
+	 1) level="Error" ;;
+	 2) level="Warning" ;;
+	 3) level="Notice" ;;
+	 4) level="Info" ;;
+	 5) level="Debug" ;;
+	esac
+	[[ ${verbosity} -ge ${severity} ]] && echo "${level}: ${message}"
+	exec 3>>"${logfile}"
+	[[ ${verbosity} -ge ${severity} ]] && echo "$(date -j '+%b %d %H:%M:%S %Z') ${hostname} ${process_name}[${pid}]: <${level}> ${message}" >&3
+	exec 3>&-
 }
 logpipe() {
-  severity="${1:-5}"
   while read line
   do
     logverb "${line}" "${severity}"
@@ -33,39 +38,48 @@ goodbye() {
   exitcode="${1:-255}"
   case "${exitcode}" in
     0) exitdesc="Success" ;;
-    1) exitdesc="Fatal Error" ;;
-    255) exitdesc="Undefined Error" ;;
+    2) exitdesc="Required folder missing or not writable" ;;
+    *) exitdesc="Undefined Error" ;;
   esac
-  logverb "Exiting with exit code ${exitcode}: ${exitdesc}" 5
-  logverb "----- End ${0} -----" 3
+	[[ ${exitcode} == 0 ]] && exitlvl=5 || exitlvl=1
+	logverb "Exiting with exit code ${exitcode}: ${exitdesc}" ${exitlvl}
   exec 2>&-
   exit "${exitcode}"
 }
  
 # Option Processing
-verbosity=5 # Default
-logfile="/dev/null" # Default
-while getopts 'v:l:' option
+verbosity=4 # Default
+logfile="/var/log/talos.log" # Default
+while getopts 'v:f:' option
 do
   case $option in
     'v') verbosity="${OPTARG}" ;;
-    'l') logfile="${OPTARG}" ;;
+    'f') logfile="${OPTARG}" ;;
   esac
 done
- 
-# Welcome Message
-logverb "----- ${0} ${*} -----" 3
- 
-# Pipe all STDERR through logpipe() level 1
-exec 2> >(logpipe 1) 
- 
-# Shift options out so positional parameters are in the correct places
 shift $(( OPTIND - 1 ))
- 
+
 # Logfile Testing
-[[ -f "${logfile}" ]] || touch "${logfile}"
-[[ -w "${logfile}" ]] || echo "Error: logfile ( ${logfile} ) is not writable." 1>&2
- 
+if [[ ! -f "${logfile}" ]]
+then
+	logdir=$(/usr/bin/dirname "${logfile}")
+	if [[ ! -d "${logdir}" ]]
+	then
+		mkdir -p "${logdir}"
+	fi
+	touch "${logfile}"
+fi
+if [[ ! -w "${logfile}" ]]
+then
+	echo "Warning: Log file ${logfile} is not writable by $(whoami). The log will not be populated." 1>&2
+	logfile="/dev/null"
+fi
+
+# Pass StdErr to logpipe
+exec 2> >(logpipe 2) 
+
+# Start Your Script Here
+
 # Variables
 protosourcepath="${1}"
 logverb "Variable protosourcepath is ${protosourcepath}" 5
@@ -89,7 +103,7 @@ then
   logverb "${sourcepath} exists" 5
 else
   logverb "Error: sourcepath variable is empty. Exit." 1
-  goodbye 1
+  goodbye 2
 fi
  
 # Verify sourcepath is readable
@@ -99,7 +113,7 @@ then
   logverb "${sourcepath} is readable" 5
 else
   logverb "Error: sourcepath is not readable. Exit." 1
-  goodbye 1
+  goodbye 2
 fi
  
 # Verify backuppath exists
@@ -116,7 +130,7 @@ else
     logverb "${backuppath} exists" 5
   else
     logverb "Error: backuppath could not be created. Exit." 1
-    goodbye 1
+    goodbye 2
   fi
 fi
  
@@ -127,7 +141,7 @@ then
   logverb "${backuppath} is writable" 5
 else
   logverb "Error: backuppath is not writeable. Exit." 1
-  goodbye 1
+  goodbye 2
 fi
  
 # Warn if backuppath is temporary
