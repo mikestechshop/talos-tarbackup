@@ -8,7 +8,7 @@ version="2.0.1"
 bundle_id="com.talosfleet.${process_name}"
 hostname=$(hostname -s)
 basename=$(basename $0)
-pid="$$"
+pid=$$
  
 # Logging Functions
 logverb() {
@@ -23,7 +23,7 @@ logverb() {
 	esac
 	[[ ${verbosity} -ge ${severity} ]] && echo "${level}: ${message}"
 	exec 3>>"${logfile}"
-	[[ ${verbosity} -ge ${severity} ]] && echo "$(date -j '+%b %d %H:%M:%S %Z') ${hostname} ${process_name}[${pid}]: <${level}> ${message}" >&3
+	[[ ${verbosity} -ge ${severity} ]] && echo "$(date '+%b %d %H:%M:%S %Z') ${hostname} ${process_name}[${pid}]: <${level}> ${message}" >&3
 	exec 3>&-
 }
 logpipe() {
