@@ -2,9 +2,9 @@
 
 # Global Variables
 
-product_name="Talos Backup and compression tool"
+product_name="Talos Backup and Compression Tool"
 process_name="tarbackup"
-version="2.0.0"
+version="2.0.1"
 bundle_id="com.talosfleet.${process_name}"
 hostname=$(hostname -s)
 basename=$(basename $0)
@@ -151,7 +151,7 @@ then
 fi
  
 # Set backup name
-backuptitle=$(echo "${sourcepath}" | sed 's/\//\ /g' | awk '{ print $NF }')
+backuptitle=$(echo "${sourcepath}" | sed 's/\//\ /g' | awk '{print $NF}')
 logverb "backuptitle is ${backuptitle}" 5
 backupname=$(echo "${backuptitle}_${timestamp}.tar.gz")
 logverb "backupname is ${backupname}" 5
@@ -159,11 +159,11 @@ logverb "backupname is ${backupname}" 5
 # Run the backup
 logverb "Running tar -cvzpf ${backuppath}/${backupname} ${sourcepath}" 5
 tar -cvzpf "${backuppath}/${backupname}" "${sourcepath}" 2>&1 | logpipe 4
-result=`echo "${PIPESTATUS[0]}"`
+result=${PIPESTATUS[0]}
 [[ "${result}" == 0 ]] && logverb "${backupname} was backed up succesfully to ${backuppath}" 3 || logverb "Error: Backup of ${backuptitle} failed" 1
  
 # Clean up old backups
-if [ "${daystokeep}" != 0 ]
+if [[ "${daystokeep}" != 0 ]]
 then
   logverb "Cleaning up old backups" 5
   deletelist=$(find "${backuppath}" -maxdepth 1 -mindepth 1 ! -mtime -"${daystokeep}")
