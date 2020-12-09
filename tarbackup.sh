@@ -4,12 +4,12 @@
 
 product_name="Talos Backup and Compression Tool"
 process_name="tarbackup"
-version="2.0.1"
+version="2.0.2"
 bundle_id="com.talosfleet.${process_name}"
 hostname=$(hostname -s)
-basename=$(basename $0)
+basename=$(basename "${0}")
 pid=$$
- 
+
 # Logging Functions
 logverb() {
 	message="${1}"
@@ -38,7 +38,7 @@ goodbye() {
   exitcode="${1:-255}"
   case "${exitcode}" in
     0) exitdesc="Success" ;;
-    2) exitdesc="Required folder missing or not writable" ;;
+    1) exitdesc="Required folder missing or not writable" ;;
     *) exitdesc="Undefined Error" ;;
   esac
 	[[ ${exitcode} == 0 ]] && exitlvl=5 || exitlvl=1
@@ -50,11 +50,13 @@ goodbye() {
 # Option Processing
 verbosity=4 # Default
 logfile="/var/log/talos.log" # Default
-while getopts 'v:f:' option
+copy_first=0 # sets flag to copy the sourcefile first
+while getopts 'v:f:c' option
 do
   case $option in
     'v') verbosity="${OPTARG}" ;;
     'f') logfile="${OPTARG}" ;;
+    'c') copy_first=1 ;;
   esac
 done
 shift $(( OPTIND - 1 ))
@@ -78,14 +80,25 @@ fi
 # Pass StdErr to logpipe
 exec 2> >(logpipe 2) 
 
-# Start Your Script Here
+# Variable Testing
+logverb "Variable \$product_name: ${product_name}" 5
+logverb "Variable \$process_name: ${process_name}" 5
+logverb "Variable \$version: ${version}" 5
+logverb "Variable \$bundle_id: ${bundle_id}" 5
+logverb "Variable \$hostname: ${hostname}" 5
+logverb "Variable \$basename: ${basename}" 5
+logverb "Variable \$pid: ${pid}" 5
+logverb "Variable \$verbosity: ${verbosity}" 5
+logverb "Variable \$logfile: ${logfile}" 5
+logverb "Variable \$copy_first: ${copy_first}" 5
 
 # Variables
 protosourcepath="${1}"
-logverb "Variable protosourcepath is ${protosourcepath}" 5
+logverb "Variable \$protosourcepath: ${protosourcepath}" 5
 protobackuppath="${2:-/tmp/}"
-logverb "Variable protobackuppath is ${protobackuppath}" 5
+logverb "Variable \$protobackuppath: ${protobackuppath}" 5
 daystokeep="${3:-0}"
+logverb "Variable \$daystokeep: ${daystokeep}" 5
 timestamp="$(date +%Y-%m-%d-%H%M)"
 logverb "Variable timestamp is ${timestamp}" 5
  
@@ -98,24 +111,62 @@ logverb "Variable backuppath is ${backuppath}" 5
  
 # Verify sourcepath exists
 logverb "Verifying sourcepath exists" 5
-if [ -d "${sourcepath}" ]
+if [[ -d "${sourcepath}" ]]
 then
   logverb "${sourcepath} exists" 5
 else
   logverb "Error: sourcepath variable is empty. Exit." 1
-  goodbye 2
+  goodbye 1
 fi
  
 # Verify sourcepath is readable
 logverb "Verifying sourcepath is readable" 5
-if [ -r "${sourcepath}" ]
+if [[ -r "${sourcepath}" ]]
 then
   logverb "${sourcepath} is readable" 5
 else
   logverb "Error: sourcepath is not readable. Exit." 1
-  goodbye 2
+  goodbye 1
 fi
- 
+
+# Set backup name
+backuptitle="$(basename ${sourcepath})_${timestamp}"
+logverb "backuptitle is ${backuptitle}" 5
+backupname="${backuptitle}.tar.gz"
+logverb "backupname is ${backupname}" 5
+
+# If copying, copy
+tempdir="/tmp"
+logverb "Variable \$tempdir: ${tempdir}" 5
+
+logverb "Verifying tempdir is writeable" 5
+if [ -w "${tempdir}" ]
+then
+  logverb "${tempdir} is writable" 5
+else
+  logverb "Error: tempdir is not writeable. Exit." 1
+  goodbye 1
+fi
+
+tempsource="${tempdir}/${backuptitle}"
+logverb "Variable \$tempsource: ${tempsource}" 5
+
+if (( ${copy_first} == 1 ))
+then
+	logverb "Copying ${sourcepath} to temporary location" 4
+	cp -R ${sourcepath} ${tempsource}
+	copy_result=$?
+	logverb "Variable \$copy_result: ${copy_result}" 5
+	if (( ${copy_result} != 0 ))
+	then
+		goodbye 2
+	else
+		logverb "Copy succeeded. Changing \$sourcepath to ${tempsource}" 4
+		sourcepath="${tempsource}"
+		logverb "Variable \$sourcepath: ${sourcepath}" 5
+	fi
+fi
+
 # Verify backuppath exists
 logverb "Verifying backuppath exists" 5
 if [ -d "${backuppath}" ]
@@ -130,7 +181,7 @@ else
     logverb "${backuppath} exists" 5
   else
     logverb "Error: backuppath could not be created. Exit." 1
-    goodbye 2
+    goodbye 1
   fi
 fi
  
@@ -141,7 +192,7 @@ then
   logverb "${backuppath} is writable" 5
 else
   logverb "Error: backuppath is not writeable. Exit." 1
-  goodbye 2
+  goodbye 1
 fi
  
 # Warn if backuppath is temporary
@@ -149,12 +200,6 @@ if [ "${backuppath}" == "/tmp" ]
 then
   logverb "Warning: backuppath is ${backuppath}. Your backup may become lost." 2
 fi
- 
-# Set backup name
-backuptitle=$(echo "${sourcepath}" | sed 's/\//\ /g' | awk '{print $NF}')
-logverb "backuptitle is ${backuptitle}" 5
-backupname=$(echo "${backuptitle}_${timestamp}.tar.gz")
-logverb "backupname is ${backupname}" 5
  
 # Run the backup
 logverb "Running tar -cvzpf ${backuppath}/${backupname} ${sourcepath}" 5
@@ -178,6 +223,13 @@ then
   fi
 else
   logverb "Cleanup of old backups is disabled" 5
+fi
+
+# Clean up tempsource, if applicable
+if [[ -d "${tempsource}" ]]
+then
+	logverb "Cleaning up tempsource directory"
+	rm -rf "${tempsource}"
 fi
  
 # Goodbye
