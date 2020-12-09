@@ -4,7 +4,7 @@
 
 product_name="Talos Backup and Compression Tool"
 process_name="tarbackup"
-version="2.0.2"
+version="2.1"
 bundle_id="com.talosfleet.${process_name}"
 hostname=$(hostname -s)
 basename=$(basename "${0}")
